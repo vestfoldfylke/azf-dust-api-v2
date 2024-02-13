@@ -5,15 +5,24 @@
   "main": "./src/functions/*.js",
   "scripts": {
     "start": "func start",
-    "test": "echo \"No tests yet...\""
+    "test": "standard && jest",
+    "test:verbose": "jest --verbose"
   },
   "dependencies": {
     "@azure/functions": "^4.0.0",
+    "@types/jest": "^29.5.12",
     "@vtfk/logger": "^6.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.3.0"
   },
   "devDependencies": {
-    "azure-functions-core-tools": "^4.x"
+    "azure-functions-core-tools": "^4.x",
+    "jest": "^29.7.0",
+    "standard": "^17.1.0"
+  },
+  "standard": {
+    "env": [
+      "jest"
+    ]
   }
 }

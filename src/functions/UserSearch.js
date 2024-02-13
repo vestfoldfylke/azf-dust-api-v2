@@ -4,15 +4,16 @@ const { decodeAccessToken } = require('../lib/helpers/decode-access-token')
 const httpResponse = require('../lib/helpers/http-response')
 const { getMongoClient } = require('../lib/mongo-client')
 const { MONGODB, DUST_ROLES } = require('../../config')
+const { maskSsnValues } = require('../lib/helpers/mask-values')
 
 app.http('UserSearch', {
   methods: ['GET'],
   authLevel: 'anonymous',
   /**
-   * 
-   * @param { import('@azure/functions').HttpRequest } request 
-   * @param { import('@azure/functions').InvocationContext } context 
-   * @returns 
+   *
+   * @param { import('@azure/functions').HttpRequest } request
+   * @param { import('@azure/functions').InvocationContext } context
+   * @returns
    */
   handler: async (request, context) => {
     logConfig({
@@ -52,6 +53,7 @@ app.http('UserSearch', {
         // { employeeNumber: regex } // Do we want to be able to find regex ssn??
       ]
     }
+    /*
     const projection = {
       userPrincipalName: 1,
       samAccountName: 1,
@@ -61,8 +63,11 @@ app.http('UserSearch', {
       departmentShort: 1,
       company: 1
     }
+    */
     const users = await collection.find(findQuery).limit(10).sort({ displayName: 1, samAccountName: 1, employeeNumber: 1 }).toArray() // add projection on just what we need
     // const users = await collection.find(findQuery).limit(10).project(projection).sort({ displayName: 1, samAccountName: 1, employeeNumber: 1 }).toArray() // add projection on just what we need
+    // Skrell away sensitive values
+    maskSsnValues(users)
     return httpResponse(200, users)
   }
 })
