@@ -68,7 +68,7 @@ app.http('Report', {
 
       // Get db client
       const mongoClient = await getMongoClient()
-      
+
       // Validate user body and get user
       let user
       try {
