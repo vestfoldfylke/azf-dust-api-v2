@@ -64,14 +64,28 @@ app.http('Report', {
       }
     } else { // If POST report
       logger('info', ['Token is valid, method is POST, checking body'], context)
-      const user = await request.json()
-      // Validate user body TODO
+      const userId = await request.text()
 
+      // Get db client
       const mongoClient = await getMongoClient()
+      
+      // Validate user body and get user
+      let user
+      try {
+        const userObjectId = new ObjectId(userId)
+        const userCollection = mongoClient.db(MONGODB.DB_NAME).collection(MONGODB.USERS_COLLECTION)
+        user = await userCollection.findOne({ _id: userObjectId })
+        if (!user) throw new Error(`Could not find any user with ObjectId(${userId}) in users collection`)
+      } catch (error) {
+        logger('error', [`Error when trying to get user with ObjectId(${userId}) in users collection`, error.response?.data || error.stack || error.toString()], context)
+        return httpResponse(500, error)
+      }
+
       const collection = mongoClient.db(MONGODB.DB_NAME).collection(MONGODB.REPORT_COLLECTION)
       try {
         const report = {
           instanceId: context.invocationId,
+          createdTimestamp: new Date().toISOString(),
           startedTimestamp: null,
           running: false,
           queued: null,

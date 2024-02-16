@@ -55,6 +55,7 @@ app.http('UserSearch', {
     }
     /*
     const projection = {
+      _id: 1,
       userPrincipalName: 1,
       samAccountName: 1,
       displayName: 1,
