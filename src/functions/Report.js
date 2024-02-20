@@ -91,7 +91,8 @@ app.http('Report', {
           queued: null,
           ready: true,
           finishedTimestamp: null,
-          runtime: null,
+          serverRuntime: null,
+          totalRuntime: null,
           user,
           caller: {
             upn: decoded.upn,
