@@ -4,7 +4,7 @@ const { decodeAccessToken } = require('../lib/helpers/decode-access-token')
 const httpResponse = require('../lib/helpers/http-response')
 const { getMongoClient } = require('../lib/mongo-client')
 const { ObjectId } = require('mongodb')
-const { MONGODB, DUST_ROLES } = require('../../config')
+const { MONGODB, DUST_ROLES, ALERT_RUNTIME_MS } = require('../../config')
 const { maskSsnValues } = require('../lib/helpers/mask-values')
 
 app.http('Report', {
@@ -54,9 +54,19 @@ app.http('Report', {
           logger('info', [`Could not find any document with _id: ObjectId(${reportId})`], context)
           return httpResponse(404, `Could not find any document with _id: ObjectId(${reportId})`)
         }
+        if (!report.finishedTimestamp) {
+          // Check if it has run tooo long
+          const fakeFinishedTimestamp = new Date()
+          const runtime = fakeFinishedTimestamp - new Date(report.createdTimestamp)
+          if (runtime > ALERT_RUNTIME_MS) {
+            logger('warn', [`ReportId: ${report._id}`, `CreatedTimestamp: ${report.createdTimestamp}`, `Runtime: ${runtime}`, `Stakkar caller som sitter og venter: ${report.caller.upn}`, `Brukeren som er treig: ${report.user.userPrincipalName}`])
+            // Simply set fakeFinishedTimestamp (which is fake), no need for the user to ask again for this report
+            report.finishedTimestamp = fakeFinishedTimestamp.toISOString()
+            report.totalRuntime = runtime
+          }
+        }
         const status = report.finishedTimestamp ? 200 : 202
-        // Skrell away stuff we dont want
-        maskSsnValues(report)
+        maskSsnValues(report) // Skrell away stuff we dont want
         return httpResponse(status, report)
       } catch (error) {
         logger('error', ['Error when trying to get report', error.response?.data || error.stack || error.toString()], context)

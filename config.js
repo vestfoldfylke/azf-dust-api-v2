@@ -1,4 +1,5 @@
 module.exports = {
+  ALERT_RUNTIME_MS: process.env.ALERT_RUNTIME_MS || 30000,
   MONGODB: {
     CONNECTION_STRING: process.env.MONGODB_CONNECTION_STRING,
     DB_NAME: process.env.MONGODB_DB_NAME,
