@@ -54,15 +54,15 @@ app.http('Report', {
           logger('info', [`Could not find any document with _id: ObjectId(${reportId})`], context)
           return httpResponse(404, `Could not find any document with _id: ObjectId(${reportId})`)
         }
-        if (!report.finishedTimestamp) {
+        if (!report.finishedTimestamp && !report.runtimeAlert) {
           // Check if it has run tooo long
-          const fakeFinishedTimestamp = new Date()
-          const runtime = fakeFinishedTimestamp - new Date(report.createdTimestamp)
+          const currentTimestamp = new Date()
+          const runtime = currentTimestamp - new Date(report.createdTimestamp)
           if (runtime > ALERT_RUNTIME_MS) {
             logger('warn', [`ReportId: ${report._id}`, `CreatedTimestamp: ${report.createdTimestamp}`, `Runtime: ${runtime}`, `Stakkar caller som sitter og venter: ${report.caller.upn}`, `Brukeren som er treig: ${report.user.userPrincipalName}`])
+            await collection.updateOne({ _id: new ObjectId(reportId) }, { $set: { runtimeAlert: { status: true, triggeredAtMs: runtime } } })
             // Simply set fakeFinishedTimestamp (which is fake), no need for the user to ask again for this report
-            report.finishedTimestamp = fakeFinishedTimestamp.toISOString()
-            report.totalRuntime = runtime
+            report.runtimeAlert = { runtimeAlert: { status: true, triggeredAtMs: runtime } }
           }
         }
         const status = report.finishedTimestamp ? 200 : 202
