@@ -43,6 +43,7 @@ app.http('UserSearch', {
 
     const mongoClient = await getMongoClient()
     const collection = mongoClient.db(MONGODB.DB_NAME).collection(MONGODB.USERS_COLLECTION)
+    
     /* ATLAS search edition - requires search index
     const wildcardSearch = request.query.get('query').toLowerCase()
     const search = {
@@ -55,6 +56,8 @@ app.http('UserSearch', {
       }
     }
     */
+
+    /* Does not work with regular index :(
     const regex = { $regex: request.query.get('query').toLowerCase() } //  $options: 'i'
     const findQuery = {
       $or: [
@@ -62,6 +65,19 @@ app.http('UserSearch', {
         { samAccountName: regex },
         { userPrincipalName: regex }
         // { employeeNumber: regex } // Do we want to be able to find regex ssn??
+      ]
+    }
+    */
+
+    // This works with regular index, so better performance (regex is startswith querystring)
+    const qs = request.query.get('query').toLowerCase()
+    const regex = { $regex: `^${qs}` }
+    const findQuery = {
+      $or: [
+        { displayNameLowerCase: regex },
+        { surNameLowerCase: regex },
+        { samAccountName: regex },
+        { userPrincipalName: regex }
       ]
     }
 
