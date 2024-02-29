@@ -43,7 +43,7 @@ app.http('UserSearch', {
 
     const mongoClient = await getMongoClient()
     const collection = mongoClient.db(MONGODB.DB_NAME).collection(MONGODB.USERS_COLLECTION)
-    
+
     /* ATLAS search edition - requires search index
     const wildcardSearch = request.query.get('query').toLowerCase()
     const search = {
