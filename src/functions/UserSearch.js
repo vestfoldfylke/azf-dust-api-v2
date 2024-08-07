@@ -77,12 +77,13 @@ app.http('UserSearch', {
         { displayNameLowerCase: regex },
         { surNameLowerCase: regex },
         { samAccountName: regex },
-        { userPrincipalName: regex }
+        { userPrincipalName: regex },
+        { feidenavn: regex }
       ]
     }
 
     // const users = await collection.aggregate( [ search ] ).limit(10).sort({ displayName: 1, samAccountName: 1 }).toArray()
-    const users = await collection.find(findQuery).limit(10).sort({ displayName: 1, samAccountName: 1, employeeNumber: 1 }).toArray() // add projection on just what we need
+    const users = await collection.find(findQuery).limit(10).sort({ displayName: 1, samAccountName: 1, feidenavn: 1 }).toArray() // add projection on just what we need
     // Skrell away sensitive values
     maskSsnValues(users)
     return httpResponse(200, users)
