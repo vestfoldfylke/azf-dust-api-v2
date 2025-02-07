@@ -4,8 +4,9 @@ const { decodeAccessToken } = require('../lib/helpers/decode-access-token')
 const httpResponse = require('../lib/helpers/http-response')
 const { getMongoClient } = require('../lib/mongo-client')
 const { ObjectId } = require('mongodb')
-const { MONGODB, DUST_ROLES, ALERT_RUNTIME_MS } = require('../../config')
+const { MONGODB, DUST_ROLES, ALERT_RUNTIME_MS, EXTRA_CAUTION_TEAMS_WEBHOOK_URL } = require('../../config')
 const { maskSsnValues } = require('../lib/helpers/mask-values')
+const { extraCautionAlert } = require('../lib/teams-webhook-alert')
 
 app.http('Report', {
   methods: ['GET', 'POST'],
@@ -86,6 +87,25 @@ app.http('Report', {
         const userCollection = mongoClient.db(MONGODB.DB_NAME).collection(MONGODB.USERS_COLLECTION)
         user = await userCollection.findOne({ _id: userObjectId })
         if (!user) throw new Error(`Could not find any user with ObjectId(${userId}) in users collection`)
+        logger('info', [`User with ObjectId(${userId}) found in users collection`], context)
+        // Så kan vi sjekke her om user er flagga i mongodb, og slenge på en ekstra property på user
+        const extraCautionCollection = mongoClient.db(MONGODB.DB_NAME).collection(MONGODB.EXTRA_CAUTION_COLLECTION)
+        const extraCautionEntry = await extraCautionCollection.findOne({ oid: user.id, disabled: { $ne: true } })
+        if (extraCautionEntry) {
+          user.extraCaution = true
+          logger('info', [`User with ObjectId(${userId}) is flagged in extraCaution collection - added user.extraCaution true to user object`], context)
+          if (EXTRA_CAUTION_TEAMS_WEBHOOK_URL) {
+            logger('info', ['EXTRA_CAUTION_TEAMS_WEBHOOK_URL is set in config, will send alert'], context)
+            // Så kan vi slenge ut en melding til teams-workflow om at det er søkt på en flagga bruker
+            try {
+              await extraCautionAlert(extraCautionEntry.oid, decoded.upn)
+            } catch (error) {
+              logger('error', ['Error when trying to send alert to teams-workflow with extraCautionAlert', error.response?.data || error.stack || error.toString()], context)
+            }
+          } else {
+            logger('info', ['EXTRA_CAUTION_TEAMS_WEBHOOK_URL is not set in config, so no alert will be sent'], context)
+          }
+        }
       } catch (error) {
         logger('error', [`Error when trying to get user with ObjectId(${userId}) in users collection`, error.response?.data || error.stack || error.toString()], context)
         return httpResponse(500, error)

@@ -11,7 +11,8 @@
   "dependencies": {
     "@azure/functions": "^4.0.0",
     "@types/jest": "^29.5.12",
-    "@vtfk/logger": "^6.2.2",
+    "@vtfk/logger": "^6.3.3",
+    "axios": "^1.7.9",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.3.0"
   },
