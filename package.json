@@ -14,7 +14,7 @@
     "@vtfk/logger": "^6.3.3",
     "axios": "^1.7.9",
     "jsonwebtoken": "^9.0.2",
-    "mongodb": "^6.3.0"
+    "mongodb": "^6.18.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",
