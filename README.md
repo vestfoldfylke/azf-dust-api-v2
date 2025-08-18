@@ -41,7 +41,7 @@ npm i
     "MONGODB_CONNECTION_STRING": "mongodb+srv://{db-user}:{db-user-password}@{cluster-url}/?retryWrites=true&w=majority",
     "MONGODB_USERS_COLLECTION": "{name of users collection}",
     "MONGODB_REPORT_COLLECTION": "{name of reports collection}",
-    "MONGODB_MONGODB_EXTRA_CAUTION_COLLECTION": "{name of collection with objects on format {oid: objectIdfromEntra}}", // Enter entra id object id of users you want to flag with some extra information in the collection
+    "MONGODB_EXTRA_CAUTION_COLLECTION": "{name of collection with objects on format {oid: objectIdfromEntra}}", // Enter entra id object id of users you want to flag with some extra information in the collection
     "MONGODB_DB_NAME": "{name of db}",
     "DUST_USER_ROLE": "{name of role for regular access}",
     "DUST_ADMIN_ROLE": "{name of role for admin access}",
