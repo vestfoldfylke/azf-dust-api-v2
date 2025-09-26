@@ -8,18 +8,6 @@ const { MONGODB, DUST_ROLES, ALERT_RUNTIME_MS, EXTRA_CAUTION_TEAMS_WEBHOOK_URL }
 const { maskSsnValues } = require('../lib/helpers/mask-values')
 const { extraCautionAlert } = require('../lib/teams-webhook-alert')
 
-const getSystemWithLongestRuntime = (systems) => {
-  const unknownSystem = { id: 'unknown', name: 'Unknown system', runtime: 69 }
-
-  if (!Array.isArray(systems)) {
-    return unknownSystem
-  }
-
-  const systemRuntimes = systems.map(s => ({ id: s.id, name: s.name, runtime: s.runtime }))
-  const highestSystemRuntime = Math.max(...systemRuntimes.map(s => s.runtime))
-  return systemRuntimes.find(s => s.runtime === highestSystemRuntime) ?? unknownSystem
-}
-
 const warnOnExtraCautionUser = async (id, upn, context) => {
   if (!EXTRA_CAUTION_TEAMS_WEBHOOK_URL) {
     logger('info', ['EXTRA_CAUTION_TEAMS_WEBHOOK_URL is not set in config, so no alert will be sent'], context)
@@ -89,13 +77,11 @@ app.http('Report', {
           // Check if it has run tooo long
           const runtime = new Date() - new Date(report.createdTimestamp)
           if (runtime > ALERT_RUNTIME_MS) {
-            const systemWithLongestRuntime = getSystemWithLongestRuntime(report.systems)
             logger('warn', [
               `ReportId: ${report._id}`,
               `CreatedTimestamp: ${report.createdTimestamp}`,
               `Runtime: ${runtime}`,
               `Stakkar caller som sitter og venter: ${report.caller.upn}`,
-              `System som er tregt: ${systemWithLongestRuntime.name} (${systemWithLongestRuntime.runtime})`,
               `Brukeren som er treig: ${report.user.userPrincipalName}`
             ])
 
