@@ -10,7 +10,7 @@ const { extraCautionAlert } = require('../lib/teams-webhook-alert')
 
 const getSystemWithLongestRuntime = (systems) => {
   const unknownSystem = { id: 'unknown', name: 'Unknown system', runtime: 69 }
-  
+
   if (!Array.isArray(systems)) {
     return unknownSystem
   }
