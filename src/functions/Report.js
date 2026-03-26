@@ -1,5 +1,5 @@
 const { app } = require('@azure/functions')
-const { logger, logConfig } = require('@vtfk/logger')
+const { logger } = require('@vestfoldfylke/loglady')
 const { decodeAccessToken } = require('../lib/helpers/decode-access-token')
 const httpResponse = require('../lib/helpers/http-response')
 const { getMongoClient } = require('../lib/mongo-client')
@@ -10,16 +10,16 @@ const { extraCautionAlert } = require('../lib/teams-webhook-alert')
 
 const warnOnExtraCautionUser = async (id, upn, context) => {
   if (!EXTRA_CAUTION_TEAMS_WEBHOOK_URL) {
-    logger('info', ['EXTRA_CAUTION_TEAMS_WEBHOOK_URL is not set in config, so no alert will be sent'], context)
+    logger.info('EXTRA_CAUTION_TEAMS_WEBHOOK_URL is not set in config, so no alert will be sent')
     return
   }
 
-  logger('info', ['EXTRA_CAUTION_TEAMS_WEBHOOK_URL is set in config, will send alert'], context)
+  logger.info('EXTRA_CAUTION_TEAMS_WEBHOOK_URL is set in config, will send alert')
   // Så kan vi slenge ut en melding til teams-workflow om at det er søkt på en flagga bruker
   try {
     await extraCautionAlert(id, upn)
   } catch (error) {
-    logger('error', ['Error when trying to send alert to teams-workflow with extraCautionAlert', error.response?.data || error.stack || error.toString()], context)
+    logger.errorException(error, 'Error when trying to send alert to teams-workflow with extraCautionAlert')
   }
 }
 
@@ -34,32 +34,32 @@ app.http('Report', {
    * @returns
    */
   handler: async (request, context) => {
-    logConfig({
+    logger.logConfig({
       prefix: 'azf-dust-api-v2 - UserSearch'
     })
-    logger('info', ['New Request. Validating token'], context)
+    logger.info('New Request. Validating token')
     const decoded = decodeAccessToken(request.headers.get('authorization'))
     if (!decoded.verified) {
-      logger('warn', ['Token is not valid', decoded.msg], context)
+      logger.warn('Token is not valid. Message: {Message}', decoded.msg)
       return httpResponse(401, decoded.msg)
     }
 
-    logConfig({
+    logger.logConfig({
       prefix: `azf-dust-api-v2 - UserSearch - ${decoded.appid}${decoded.upn ? ' - ' + decoded.upn : ''}`
     })
 
     // VALIDATE ROLE AS WELL
     if (!decoded.roles.includes(DUST_ROLES.USER) && !decoded.roles.includes(DUST_ROLES.ADMIN)) {
-      logger('info', ['Missing required role for request'], context)
+      logger.info('Missing required role for request')
       return httpResponse(401, 'Missing required role for the request')
     }
 
     // GET report
     if (request.method === 'GET') {
-      logger('info', ['Token is valid, method is GET, checking params'], context)
+      logger.info('Token is valid, method is GET, checking params')
       const reportId = request.params.reportId
       if (!reportId) {
-        logger('warn', ['No param "reportId" here...'], context)
+        logger.warn('No param "reportId" here...')
         return httpResponse(400, 'No param "reportId" here...')
       }
 
@@ -69,7 +69,7 @@ app.http('Report', {
       try {
         const report = await collection.findOne({ _id: new ObjectId(reportId) })
         if (!report) {
-          logger('warn', [`Could not find any document with _id: ObjectId(${reportId})`], context)
+          logger.warn('Could not find any document with _id: ObjectId({reportId})', reportId)
           return httpResponse(404, `Could not find any document with _id: ObjectId(${reportId})`)
         }
 
@@ -77,13 +77,13 @@ app.http('Report', {
           // Check if it has run tooo long
           const runtime = new Date() - new Date(report.createdTimestamp)
           if (runtime > ALERT_RUNTIME_MS) {
-            logger('warn', [
-              `ReportId: ${report._id}`,
-              `CreatedTimestamp: ${report.createdTimestamp}`,
-              `Runtime: ${runtime}`,
-              `Stakkar caller som sitter og venter: ${report.caller.upn}`,
-              `Brukeren som er treig: ${report.user.userPrincipalName}`
-            ])
+            logger.warn(
+              'ReportId: {reportId} - CreatedTimestamp: {reportCreatedTimestamp} - Runtime: {runtime} - Stakkar caller som sitter og venter: {reportCallerUpn} - Brukeren som er treig: {reportUserUserPrincipalName}',
+              report._id,
+              report.createdTimestamp,
+              runtime,
+              report.caller.upn,
+              report.user.userPrincipalName)
 
             const runtimeAlert = { status: true, triggeredAtMs: runtime }
             await collection.updateOne({ _id: new ObjectId(reportId) }, { $set: { runtimeAlert } })
@@ -97,13 +97,13 @@ app.http('Report', {
 
         return httpResponse(status, report)
       } catch (error) {
-        logger('error', ['Error when trying to get report', error.response?.data || error.stack || error.toString()], context)
+        logger.errorException(error, 'Error when trying to get report')
         return httpResponse(500, error)
       }
     }
 
     // POST report
-    logger('info', ['Token is valid, method is POST, checking body'], context)
+    logger.info('Token is valid, method is POST, checking body')
     const userId = await request.text()
 
     // Get db client
@@ -116,21 +116,21 @@ app.http('Report', {
       const userCollection = mongoClient.db(MONGODB.DB_NAME).collection(MONGODB.USERS_COLLECTION)
       user = await userCollection.findOne({ _id: userObjectId })
       if (!user) {
-        logger('warn', [`User with ObjectId(${userId}) not found in users collection`], context)
+        logger.warn('User with ObjectId({userId}) not found in users collection', userId)
         return httpResponse(500, `User with ObjectId(${userId}) not found in users collection`)
       }
 
-      logger('info', [`User with ObjectId(${userId}) found in users collection`], context)
+      logger.info('User with ObjectId({userId}) found in users collection', userId)
       // Så kan vi sjekke her om user er flagga i mongodb, og slenge på en ekstra property på user
       const extraCautionCollection = mongoClient.db(MONGODB.DB_NAME).collection(MONGODB.EXTRA_CAUTION_COLLECTION)
       const extraCautionEntry = await extraCautionCollection.findOne({ oid: user.id, disabled: { $ne: true } })
       if (extraCautionEntry) {
         user.extraCaution = true
-        logger('info', [`User with ObjectId(${userId}) is flagged in extraCaution collection - added user.extraCaution true to user object`], context)
+        logger.info('User with ObjectId({userId}) is flagged in extraCaution collection - added user.extraCaution true to user object', userId)
         await warnOnExtraCautionUser(extraCautionEntry.oid, decoded.upn, context)
       }
     } catch (error) {
-      logger('error', [`Error when trying to get user with ObjectId(${userId}) in users collection`, error.response?.data || error.stack || error.toString()], context)
+      logger.errorException(error, 'Error when trying to get user with ObjectId({userId}) in users collection', userId)
       return httpResponse(500, error)
     }
 
@@ -160,7 +160,7 @@ app.http('Report', {
 
       return httpResponse(200, insertReportResult.insertedId)
     } catch (error) {
-      logger('error', ['Error when trying to create report', error.response?.data || error.stack || error.toString()], context)
+      logger.errorException(error, 'Error when trying to create report')
       return httpResponse(500, error)
     }
   }
