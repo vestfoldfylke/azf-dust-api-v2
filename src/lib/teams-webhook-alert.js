@@ -1,5 +1,4 @@
 const { EXTRA_CAUTION_TEAMS_WEBHOOK_URL } = require('../../config')
-const axios = require('axios')
 
 /**
  *
@@ -49,7 +48,18 @@ const extraCautionAlert = async (oid, callerUpn) => {
     'Dette er kun til info'
   ]
   const adaptiveCard = formatAdaptiveCard('warning', title, messageArray)
-  await axios.post(EXTRA_CAUTION_TEAMS_WEBHOOK_URL, adaptiveCard)
+
+  const response = await fetch(EXTRA_CAUTION_TEAMS_WEBHOOK_URL, {
+    method: 'POST',
+    body: JSON.stringify(adaptiveCard)
+  })
+
+  if (response.ok) {
+    return
+  }
+
+  const message = await response.text()
+  throw new Error(message)
 }
 
 module.exports = { extraCautionAlert }

@@ -1,5 +1,5 @@
 const { app } = require('@azure/functions')
-const { logger, logConfig } = require('@vtfk/logger')
+const { logger } = require('@vestfoldfylke/loglady')
 const { decodeAccessToken } = require('../lib/helpers/decode-access-token')
 const httpResponse = require('../lib/helpers/http-response')
 const { getMongoClient } = require('../lib/mongo-client')
@@ -16,28 +16,28 @@ app.http('UserSearch', {
    * @returns
    */
   handler: async (request, context) => {
-    logConfig({
+    logger.logConfig({
       prefix: 'azf-dust-api-v2 - UserSearch'
     })
-    logger('info', ['New Request. Validating token'], context)
+    logger.info('New Request. Validating token')
     const decoded = decodeAccessToken(request.headers.get('authorization'))
     if (!decoded.verified) {
-      logger('warn', ['Token is not valid', decoded.msg], context)
+      logger.warn('Token is not valid! Message: {Message}', decoded.msg)
       return httpResponse(401, decoded.msg)
     }
-    logConfig({
+    logger.logConfig({
       prefix: `azf-dust-api-v2 - UserSearch - ${decoded.appid}${decoded.upn ? ' - ' + decoded.upn : ''}`
     })
 
     // VALIDATE ROLE AS WELL
     if (!decoded.roles.includes(DUST_ROLES.USER) && !decoded.roles.includes(DUST_ROLES.ADMIN)) {
-      logger('info', ['Missing required role for request'], context)
+      logger.info('Missing required role for request')
       return httpResponse(401, 'Missing required role for the request')
     }
 
-    logger('info', ['Token is valid, checking params'], context)
+    logger.info('Token is valid, checking params')
     if (!request.query.get('query')) {
-      logger('info', ['No param "query" here...'], context)
+      logger.warn('No param "query" here...')
       return httpResponse(400, 'No param "query" here...')
     }
 
