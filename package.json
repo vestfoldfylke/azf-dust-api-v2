@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@azure/functions": "^4.12.0",
-    "@vestfoldfylke/loglady": "^1.5.2",
+    "@vestfoldfylke/loglady": "^1.5.3",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.1.1"
   },
