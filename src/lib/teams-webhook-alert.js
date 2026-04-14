@@ -63,6 +63,9 @@ const extraCautionAlert = async (oid, callerUpn) => {
 
   const response = await fetch(EXTRA_CAUTION_TEAMS_WEBHOOK_URL, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(adaptiveCard)
   })
 
