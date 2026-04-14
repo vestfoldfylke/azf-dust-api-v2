@@ -6,8 +6,7 @@
   "repository": "git+azf-dust-api-v2.git",
   "scripts": {
     "start": "func start",
-    "test": "standard && jest",
-    "test:verbose": "jest --verbose"
+    "test": "biome check && node --test tests/**/*.test.js"
   },
   "dependencies": {
     "@azure/functions": "^4.12.0",
@@ -16,13 +15,7 @@
     "mongodb": "^7.1.1"
   },
   "devDependencies": {
-    "@types/jest": "^30.0.0",
-    "jest": "^30.3.0",
-    "standard": "^17.1.2"
-  },
-  "standard": {
-    "env": [
-      "jest"
-    ]
+    "@biomejs/biome": "2.4.11",
+    "@types/node": "^25.6.0"
   }
 }
