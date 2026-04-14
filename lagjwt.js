@@ -1,4 +1,4 @@
-(async () => {
+;(async () => {
   const { sign } = require('jsonwebtoken')
 
   const payload = {
@@ -9,10 +9,7 @@
     exp: 1706365820,
     acr: '1',
     aio: 'babababab',
-    amr: [
-      'rsa',
-      'mfa'
-    ],
+    amr: ['rsa', 'mfa'],
     roles: ['dust_access', 'admin_access'],
     appid: 'gudene veit',
     appidacr: '0',

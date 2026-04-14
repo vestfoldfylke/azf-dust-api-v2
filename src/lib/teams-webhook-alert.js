@@ -8,10 +8,20 @@ const { EXTRA_CAUTION_TEAMS_WEBHOOK_URL } = require('../../config')
  * @returns
  */
 const formatAdaptiveCard = (color, title, messageArray) => {
-  if (!color) color = 'accent'
-  if (!title) title = 'generisk tittel'
-  if (messageArray && !Array.isArray(messageArray)) throw new Error('messageArray must be an array')
-  if (!messageArray) messageArray = ['generisk melding']
+  if (messageArray && !Array.isArray(messageArray)) {
+    throw new Error('messageArray must be an array')
+  }
+
+  if (!color) {
+    color = 'accent'
+  }
+  if (!title) {
+    title = 'generisk tittel'
+  }
+  if (!messageArray) {
+    messageArray = ['generisk melding']
+  }
+
   return {
     type: 'message',
     attachments: [
@@ -32,7 +42,13 @@ const formatAdaptiveCard = (color, title, messageArray) => {
               size: 'Large',
               wrap: true
             },
-            ...(messageArray.map(msg => { return { type: 'TextBlock', text: `• ${msg}`, wrap: true } }))
+            ...messageArray.map((msg) => {
+              return {
+                type: 'TextBlock',
+                text: `• ${msg}`,
+                wrap: true
+              }
+            })
           ]
         }
       }
@@ -42,11 +58,7 @@ const formatAdaptiveCard = (color, title, messageArray) => {
 
 const extraCautionAlert = async (oid, callerUpn) => {
   const title = '⚠️ En flagget bruker har blitt søkt opp i D.U.S.T'
-  const messageArray = [
-    `Flagget brukers object id (EntraId): ${oid}`,
-    `Søkt på av: ${callerUpn}`,
-    'Dette er kun til info'
-  ]
+  const messageArray = [`Flagget brukers object id (EntraId): ${oid}`, `Søkt på av: ${callerUpn}`, 'Dette er kun til info']
   const adaptiveCard = formatAdaptiveCard('warning', title, messageArray)
 
   const response = await fetch(EXTRA_CAUTION_TEAMS_WEBHOOK_URL, {

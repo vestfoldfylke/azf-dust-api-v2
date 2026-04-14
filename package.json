@@ -6,6 +6,7 @@
   "repository": "git+azf-dust-api-v2.git",
   "scripts": {
     "start": "func start",
+    "lint:fix": "biome check --write",
     "test": "biome check && node --test tests/**/*.test.js"
   },
   "dependencies": {
