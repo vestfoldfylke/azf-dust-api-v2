@@ -1,14 +1,14 @@
 const { app } = require('@azure/functions')
 const { logger } = require('@vestfoldfylke/loglady')
+const { ObjectId } = require('mongodb')
 const { decodeAccessToken } = require('../lib/helpers/decode-access-token')
 const httpResponse = require('../lib/helpers/http-response')
-const { getMongoClient } = require('../lib/mongo-client')
-const { ObjectId } = require('mongodb')
-const { MONGODB, DUST_ROLES, ALERT_RUNTIME_MS, EXTRA_CAUTION_TEAMS_WEBHOOK_URL } = require('../../config')
 const { maskSsnValues } = require('../lib/helpers/mask-values')
+const { getMongoClient } = require('../lib/mongo-client')
 const { extraCautionAlert } = require('../lib/teams-webhook-alert')
+const { MONGODB, DUST_ROLES, ALERT_RUNTIME_MS, EXTRA_CAUTION_TEAMS_WEBHOOK_URL } = require('../../config')
 
-const warnOnExtraCautionUser = async (id, upn, context) => {
+const warnOnExtraCautionUser = async (id, upn) => {
   if (!EXTRA_CAUTION_TEAMS_WEBHOOK_URL) {
     logger.info('EXTRA_CAUTION_TEAMS_WEBHOOK_URL is not set in config, so no alert will be sent')
     return
@@ -35,7 +35,7 @@ app.http('Report', {
    */
   handler: async (request, context) => {
     logger.logConfig({
-      prefix: 'azf-dust-api-v2 - UserSearch'
+      prefix: 'azf-dust-api-v2 - Report'
     })
     logger.info('New Request. Validating token')
     const decoded = decodeAccessToken(request.headers.get('authorization'))
@@ -45,7 +45,7 @@ app.http('Report', {
     }
 
     logger.logConfig({
-      prefix: `azf-dust-api-v2 - UserSearch - ${decoded.appid}${decoded.upn ? ' - ' + decoded.upn : ''}`
+      prefix: `azf-dust-api-v2 - Report - ${decoded.appid}${decoded.upn ? ` - ${decoded.upn}` : ''}`
     })
 
     // VALIDATE ROLE AS WELL
@@ -74,8 +74,8 @@ app.http('Report', {
         }
 
         if (!report.finishedTimestamp && !report.runtimeAlert) {
-          // Check if it has run tooo long
-          const runtime = new Date() - new Date(report.createdTimestamp)
+          // Check if it has run too long
+          const runtime = Date.now() - new Date(report.createdTimestamp).getTime()
           if (runtime > ALERT_RUNTIME_MS) {
             logger.warn(
               'ReportId: {reportId} - CreatedTimestamp: {reportCreatedTimestamp} - Runtime: {runtime} - Stakkar caller som sitter og venter: {reportCallerUpn} - Brukeren som er treig: {reportUserUserPrincipalName}',
@@ -83,7 +83,8 @@ app.http('Report', {
               report.createdTimestamp,
               runtime,
               report.caller.upn,
-              report.user.userPrincipalName)
+              report.user.userPrincipalName
+            )
 
             const runtimeAlert = { status: true, triggeredAtMs: runtime }
             await collection.updateOne({ _id: new ObjectId(reportId) }, { $set: { runtimeAlert } })
@@ -127,7 +128,7 @@ app.http('Report', {
       if (extraCautionEntry) {
         user.extraCaution = true
         logger.info('User with ObjectId({userId}) is flagged in extraCaution collection - added user.extraCaution true to user object', userId)
-        await warnOnExtraCautionUser(extraCautionEntry.oid, decoded.upn, context)
+        await warnOnExtraCautionUser(extraCautionEntry.oid, decoded.upn)
       }
     } catch (error) {
       logger.errorException(error, 'Error when trying to get user with ObjectId({userId}) in users collection', userId)
@@ -155,7 +156,8 @@ app.http('Report', {
       }
       const insertReportResult = await collection.insertOne(report)
       if (!insertReportResult.acknowledged) {
-        throw new Error('Failed when inserting document in db')
+        logger.error('Failed when inserting document in db')
+        return httpResponse(500, 'Failed when inserting document in db')
       }
 
       return httpResponse(200, insertReportResult.insertedId)

@@ -32,7 +32,7 @@ const decodeAccessToken = (token) => {
   let decoded
   try {
     decoded = decode(token.replace('Bearer ', ''))
-  } catch (error) {
+  } catch {
     result.msg = 'Token is not a valid jwt'
     return result
   }

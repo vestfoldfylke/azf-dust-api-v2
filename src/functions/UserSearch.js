@@ -2,9 +2,9 @@ const { app } = require('@azure/functions')
 const { logger } = require('@vestfoldfylke/loglady')
 const { decodeAccessToken } = require('../lib/helpers/decode-access-token')
 const httpResponse = require('../lib/helpers/http-response')
+const { maskSsnValues } = require('../lib/helpers/mask-values')
 const { getMongoClient } = require('../lib/mongo-client')
 const { MONGODB, DUST_ROLES } = require('../../config')
-const { maskSsnValues } = require('../lib/helpers/mask-values')
 
 app.http('UserSearch', {
   methods: ['GET'],
@@ -12,10 +12,10 @@ app.http('UserSearch', {
   /**
    *
    * @param { import('@azure/functions').HttpRequest } request
-   * @param { import('@azure/functions').InvocationContext } context
+   * @param { import('@azure/functions').InvocationContext } _context
    * @returns
    */
-  handler: async (request, context) => {
+  handler: async (request, _context) => {
     logger.logConfig({
       prefix: 'azf-dust-api-v2 - UserSearch'
     })
@@ -26,7 +26,7 @@ app.http('UserSearch', {
       return httpResponse(401, decoded.msg)
     }
     logger.logConfig({
-      prefix: `azf-dust-api-v2 - UserSearch - ${decoded.appid}${decoded.upn ? ' - ' + decoded.upn : ''}`
+      prefix: `azf-dust-api-v2 - UserSearch - ${decoded.appid}${decoded.upn ? ` - ${decoded.upn}` : ''}`
     })
 
     // VALIDATE ROLE AS WELL
@@ -69,7 +69,7 @@ app.http('UserSearch', {
     }
     */
 
-    // This works with regular index, so better performance (regex is startswith querystring)
+    // This works with regular index, so better performance (regex is startsWith querystring)
     const qs = request.query.get('query').toLowerCase()
     const regex = { $regex: `^${qs}` }
     const findQuery = {
@@ -86,6 +86,7 @@ app.http('UserSearch', {
     const users = await collection.find(findQuery).limit(10).sort({ displayName: 1, samAccountName: 1, feidenavn: 1 }).toArray() // add projection on just what we need
     // Skrell away sensitive values
     maskSsnValues(users)
+
     return httpResponse(200, users)
   }
 })
