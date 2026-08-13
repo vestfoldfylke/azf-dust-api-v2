@@ -15,8 +15,8 @@ const httpResponse = (statusCode: number, data: unknown): HttpResponseInit => {
     }
   }
 
-  const error = data instanceof Error ? data.stack || data.toString() : String(data)
-  const message = data instanceof Error ? data.toString() : String(data)
+  const error: string = data instanceof Error ? data.stack || data.toString() : String(data)
+  const message: string = data instanceof Error ? data.toString() : String(data)
   return {
     status: statusCode,
     jsonBody: {

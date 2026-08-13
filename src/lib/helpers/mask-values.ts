@@ -6,7 +6,7 @@ const maskValues = (obj: unknown, condition: Condition, mask: Mask): void => {
     return
   }
 
-  const record = obj as Record<string, unknown>
+  const record: Record<string, unknown> = obj as Record<string, unknown>
   for (const [key, value] of Object.entries(record)) {
     if (value && typeof value === 'object') {
       maskValues(value, condition, mask)
@@ -22,7 +22,7 @@ const maskValues = (obj: unknown, condition: Condition, mask: Mask): void => {
 const isPotentialSsn: Condition = (value) => Boolean(Number(value)) && String(value).length === 11
 
 const maskSsn: Mask = (ssn) => {
-  const birthdate = String(ssn).substring(0, 6)
+  const birthdate: string = String(ssn).substring(0, 6)
   return `${birthdate}*****`
 }
 

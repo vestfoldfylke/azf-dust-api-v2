@@ -1,6 +1,34 @@
 import { sign } from 'jsonwebtoken'
 
-const payload = {
+type Payload = {
+  aud: string
+  iss: string
+  iat: number
+  nbf: number
+  exp: number
+  acr: string
+  aio: string
+  amr: string[]
+  roles: string[]
+  appid: string
+  appidacr: string
+  family_name: string
+  given_name: string
+  ipaddr: string
+  name: string
+  oid: string
+  onprem_sid: string
+  rh: string
+  scp: string
+  sub: string
+  tid: string
+  unique_name: string
+  upn: string
+  uti: string
+  ver: string
+}
+
+const payload: Payload = {
   aud: 'api://blablab',
   iss: 'https://dust.dustesen.vtfk.net/hahah/',
   iat: 1706360392,

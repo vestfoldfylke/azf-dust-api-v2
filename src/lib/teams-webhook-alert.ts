@@ -67,11 +67,11 @@ export const extraCautionAlert = async (oid: string, callerUpn: string): Promise
     throw new Error('EXTRA_CAUTION_TEAMS_WEBHOOK_URL is not set')
   }
 
-  const title = '⚠️ En flagget bruker har blitt søkt opp i D.U.S.T'
-  const messageArray = [`Flagget brukers object id (EntraId): ${oid}`, `Søkt på av: ${callerUpn}`, 'Dette er kun til info']
-  const adaptiveCard = formatAdaptiveCard('warning', title, messageArray)
+  const title: string = '⚠️ En flagget bruker har blitt søkt opp i D.U.S.T'
+  const messageArray: string[] = [`Flagget brukers object id (EntraId): ${oid}`, `Søkt på av: ${callerUpn}`, 'Dette er kun til info']
+  const adaptiveCard: AdaptiveCardMessage = formatAdaptiveCard('warning', title, messageArray)
 
-  const response = await fetch(EXTRA_CAUTION_TEAMS_WEBHOOK_URL, {
+  const response: Response = await fetch(EXTRA_CAUTION_TEAMS_WEBHOOK_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -83,6 +83,6 @@ export const extraCautionAlert = async (oid: string, callerUpn: string): Promise
     return
   }
 
-  const message = await response.text()
+  const message: string = await response.text()
   throw new Error(message)
 }

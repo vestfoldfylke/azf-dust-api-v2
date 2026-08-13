@@ -133,9 +133,9 @@ const exampleReport: ExampleReport = {
 
 maskSsnValues(exampleReport)
 
-const [adSystem, otherSystem] = exampleReport.systems
-const [firstTest] = adSystem.tests
-const { listeMedFnr } = firstTest.result.raw.fnr
+const [adSystem, otherSystem]: [AdSystem, OtherSystem] = exampleReport.systems
+const [firstTest]: AdSystem['tests'] = adSystem.tests
+const { listeMedFnr }: RawFnr = firstTest.result.raw.fnr
 
 describe('SSNs are masked when', () => {
   test('It is nested in user object', () => {

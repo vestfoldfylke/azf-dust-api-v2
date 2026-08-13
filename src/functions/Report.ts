@@ -1,12 +1,18 @@
 import { app, type HttpRequest, type HttpResponseInit, type InvocationContext } from '@azure/functions'
 import { logger } from '@vestfoldfylke/loglady'
-import { ObjectId } from 'mongodb'
+import { type Collection, type Document, type MongoClient, ObjectId } from 'mongodb'
 import { ALERT_RUNTIME_MS, DUST_ROLES, EXTRA_CAUTION_TEAMS_WEBHOOK_URL, MONGODB } from '../../config.js'
 import { decodeAccessToken } from '../lib/helpers/decode-access-token.js'
 import httpResponse from '../lib/helpers/http-response.js'
 import { maskSsnValues } from '../lib/helpers/mask-values.js'
 import { getMongoClient } from '../lib/mongo-client.js'
 import { extraCautionAlert } from '../lib/teams-webhook-alert.js'
+import type { Decoded } from '../types/decoded.js'
+
+type RuntimeAlert = {
+  status: boolean
+  triggeredAtMs: number
+}
 
 const warnOnExtraCautionUser = async (id: string, upn: string): Promise<void> => {
   if (!EXTRA_CAUTION_TEAMS_WEBHOOK_URL) {
@@ -36,8 +42,9 @@ app.http('Report', {
     logger.logConfig({
       prefix: 'azf-dust-api-v2 - Report'
     })
+
     logger.info('New Request. Validating token')
-    const decoded = decodeAccessToken(request.headers.get('authorization'))
+    const decoded: Decoded = decodeAccessToken(request.headers.get('authorization'))
     if (!decoded.verified) {
       logger.warn('Token is not valid. Message: {Message}', decoded.msg)
       return httpResponse(401, decoded.msg)
@@ -59,31 +66,31 @@ app.http('Report', {
       return httpResponse(500, (error as Error).message)
     }
 
-    const dbName = MONGODB.DB_NAME as string
-    const reportCollectionName = MONGODB.REPORT_COLLECTION as string
-    const usersCollectionName = MONGODB.USERS_COLLECTION as string
-    const extraCautionCollectionName = MONGODB.EXTRA_CAUTION_COLLECTION as string
+    const dbName: string = MONGODB.DB_NAME as string
+    const reportCollectionName: string = MONGODB.REPORT_COLLECTION as string
+    const usersCollectionName: string = MONGODB.USERS_COLLECTION as string
+    const extraCautionCollectionName: string = MONGODB.EXTRA_CAUTION_COLLECTION as string
 
     if (request.method === 'GET') {
       logger.info('Token is valid, method is GET, checking params')
-      const reportId = request.params.reportId
+      const reportId: string | undefined = request.params.reportId
       if (!reportId) {
         logger.warn('No param "reportId" here...')
         return httpResponse(400, 'No param "reportId" here...')
       }
 
-      const mongoClient = await getMongoClient()
-      const collection = mongoClient.db(dbName).collection(reportCollectionName)
+      const mongoClient: MongoClient = await getMongoClient()
+      const collection: Collection<Document> = mongoClient.db(dbName).collection(reportCollectionName)
 
       try {
-        const report = await collection.findOne({ _id: new ObjectId(reportId) })
+        const report: Document | null = await collection.findOne({ _id: new ObjectId(reportId) })
         if (!report) {
           logger.warn('Could not find any document with _id: ObjectId({reportId})', reportId)
           return httpResponse(404, `Could not find any document with _id: ObjectId(${reportId})`)
         }
 
         if (!report.finishedTimestamp && !report.runtimeAlert) {
-          const runtime = Date.now() - new Date(report.createdTimestamp).getTime()
+          const runtime: number = Date.now() - new Date(report.createdTimestamp).getTime()
           if (runtime > ALERT_RUNTIME_MS) {
             logger.warn(
               'ReportId: {reportId} - CreatedTimestamp: {reportCreatedTimestamp} - Runtime: {runtime} - Stakkar caller som sitter og venter: {reportCallerUpn} - Brukeren som er treig: {reportUserUserPrincipalName}',
@@ -94,13 +101,13 @@ app.http('Report', {
               report.user.userPrincipalName
             )
 
-            const runtimeAlert = { status: true, triggeredAtMs: runtime }
+            const runtimeAlert: RuntimeAlert = { status: true, triggeredAtMs: runtime }
             await collection.updateOne({ _id: new ObjectId(reportId) }, { $set: { runtimeAlert } })
             report.runtimeAlert = runtimeAlert
           }
         }
 
-        const status = report.finishedTimestamp ? 200 : 202
+        const status: number = report.finishedTimestamp ? 200 : 202
         maskSsnValues(report)
 
         return httpResponse(status, report)
@@ -111,14 +118,14 @@ app.http('Report', {
     }
 
     logger.info('Token is valid, method is POST, checking body')
-    const userId = await request.text()
+    const userId: string = await request.text()
 
-    const mongoClient = await getMongoClient()
+    const mongoClient: MongoClient = await getMongoClient()
 
-    let user: Record<string, unknown> | null
+    let user: Document | null
     try {
-      const userObjectId = new ObjectId(userId)
-      const userCollection = mongoClient.db(dbName).collection(usersCollectionName)
+      const userObjectId: ObjectId = new ObjectId(userId)
+      const userCollection: Collection<Document> = mongoClient.db(dbName).collection(usersCollectionName)
       user = await userCollection.findOne({ _id: userObjectId })
       if (!user) {
         logger.warn('User with ObjectId({userId}) not found in users collection', userId)
@@ -126,8 +133,8 @@ app.http('Report', {
       }
 
       logger.info('User with ObjectId({userId}) found in users collection', userId)
-      const extraCautionCollection = mongoClient.db(dbName).collection(extraCautionCollectionName)
-      const extraCautionEntry = await extraCautionCollection.findOne({ oid: user.id, disabled: { $ne: true } })
+      const extraCautionCollection: Collection<Document> = mongoClient.db(dbName).collection(extraCautionCollectionName)
+      const extraCautionEntry: Document | null = await extraCautionCollection.findOne({ oid: user.id, disabled: { $ne: true } })
       if (extraCautionEntry) {
         user.extraCaution = true
         logger.info('User with ObjectId({userId}) is flagged in extraCaution collection - added user.extraCaution true to user object', userId)
@@ -138,9 +145,9 @@ app.http('Report', {
       return httpResponse(500, error)
     }
 
-    const collection = mongoClient.db(dbName).collection(reportCollectionName)
+    const collection: Collection<Document> = mongoClient.db(dbName).collection(reportCollectionName)
     try {
-      const report = {
+      const report: Document = {
         instanceId: context.invocationId,
         createdTimestamp: new Date().toISOString(),
         startedTimestamp: null,
@@ -157,7 +164,7 @@ app.http('Report', {
         },
         systems: []
       }
-      const insertReportResult = await collection.insertOne(report)
+      const insertReportResult: { acknowledged: boolean; insertedId: ObjectId } = await collection.insertOne(report)
       if (!insertReportResult.acknowledged) {
         logger.error('Failed when inserting document in db')
         return httpResponse(500, 'Failed when inserting document in db')

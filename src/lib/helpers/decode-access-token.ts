@@ -36,7 +36,7 @@ export function decodeAccessToken(auth: string | null | undefined): Decoded {
     return result
   }
 
-  const { upn, appid, roles, oid } = payload as DecodedPayload
+  const { upn, appid, roles, oid }: DecodedPayload = payload as DecodedPayload
   if (!upn && !appid) {
     result.msg = 'Missing upn or appId'
     return result
