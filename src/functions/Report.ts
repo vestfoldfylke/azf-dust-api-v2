@@ -1,25 +1,30 @@
-const { app } = require('@azure/functions')
-const { logger } = require('@vestfoldfylke/loglady')
-const { ObjectId } = require('mongodb')
-const { decodeAccessToken } = require('../lib/helpers/decode-access-token')
-const httpResponse = require('../lib/helpers/http-response')
-const { maskSsnValues } = require('../lib/helpers/mask-values')
-const { getMongoClient } = require('../lib/mongo-client')
-const { extraCautionAlert } = require('../lib/teams-webhook-alert')
-const { MONGODB, DUST_ROLES, ALERT_RUNTIME_MS, EXTRA_CAUTION_TEAMS_WEBHOOK_URL } = require('../../config')
+import { app, type HttpRequest, type HttpResponseInit, type InvocationContext } from '@azure/functions'
+import { logger } from '@vestfoldfylke/loglady'
+import { ObjectId } from 'mongodb'
+import { ALERT_RUNTIME_MS, DUST_ROLES, EXTRA_CAUTION_TEAMS_WEBHOOK_URL, MONGODB } from '../../config.js'
+import { decodeAccessToken } from '../lib/helpers/decode-access-token.js'
+import httpResponse from '../lib/helpers/http-response.js'
+import { maskSsnValues } from '../lib/helpers/mask-values.js'
+import { getMongoClient } from '../lib/mongo-client.js'
+import { extraCautionAlert } from '../lib/teams-webhook-alert.js'
 
-const warnOnExtraCautionUser = async (id, upn) => {
+const warnOnExtraCautionUser = async (id: string, upn: string): Promise<void> => {
   if (!EXTRA_CAUTION_TEAMS_WEBHOOK_URL) {
     logger.info('EXTRA_CAUTION_TEAMS_WEBHOOK_URL is not set in config, so no alert will be sent')
     return
   }
 
   logger.info('EXTRA_CAUTION_TEAMS_WEBHOOK_URL is set in config, will send alert')
-  // Så kan vi slenge ut en melding til teams-workflow om at det er søkt på en flagga bruker
   try {
     await extraCautionAlert(id, upn)
   } catch (error) {
-    logger.errorException(error, 'Error when trying to send alert to teams-workflow with extraCautionAlert')
+    logger.errorException(error as Error, 'Error when trying to send alert to teams-workflow with extraCautionAlert')
+  }
+}
+
+const assertMongoConfig = (): void => {
+  if (!MONGODB.DB_NAME || !MONGODB.REPORT_COLLECTION || !MONGODB.USERS_COLLECTION || !MONGODB.EXTRA_CAUTION_COLLECTION) {
+    throw new Error('MONGODB configuration is incomplete')
   }
 }
 
@@ -27,13 +32,7 @@ app.http('Report', {
   methods: ['GET', 'POST'],
   authLevel: 'anonymous',
   route: 'Report/{reportId?}',
-  /**
-   *
-   * @param { import('@azure/functions').HttpRequest } request
-   * @param { import('@azure/functions').InvocationContext } context
-   * @returns
-   */
-  handler: async (request, context) => {
+  handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     logger.logConfig({
       prefix: 'azf-dust-api-v2 - Report'
     })
@@ -48,13 +47,23 @@ app.http('Report', {
       prefix: `azf-dust-api-v2 - Report - ${decoded.appid}${decoded.upn ? ` - ${decoded.upn}` : ''}`
     })
 
-    // VALIDATE ROLE AS WELL
-    if (!decoded.roles.includes(DUST_ROLES.USER) && !decoded.roles.includes(DUST_ROLES.ADMIN)) {
+    if (!decoded.roles.includes(DUST_ROLES.USER ?? '') && !decoded.roles.includes(DUST_ROLES.ADMIN ?? '')) {
       logger.info('Missing required role for request')
       return httpResponse(401, 'Missing required role for the request')
     }
 
-    // GET report
+    try {
+      assertMongoConfig()
+    } catch (error) {
+      logger.errorException(error as Error, 'MONGODB configuration is incomplete')
+      return httpResponse(500, (error as Error).message)
+    }
+
+    const dbName = MONGODB.DB_NAME as string
+    const reportCollectionName = MONGODB.REPORT_COLLECTION as string
+    const usersCollectionName = MONGODB.USERS_COLLECTION as string
+    const extraCautionCollectionName = MONGODB.EXTRA_CAUTION_COLLECTION as string
+
     if (request.method === 'GET') {
       logger.info('Token is valid, method is GET, checking params')
       const reportId = request.params.reportId
@@ -64,7 +73,7 @@ app.http('Report', {
       }
 
       const mongoClient = await getMongoClient()
-      const collection = mongoClient.db(MONGODB.DB_NAME).collection(MONGODB.REPORT_COLLECTION)
+      const collection = mongoClient.db(dbName).collection(reportCollectionName)
 
       try {
         const report = await collection.findOne({ _id: new ObjectId(reportId) })
@@ -74,12 +83,11 @@ app.http('Report', {
         }
 
         if (!report.finishedTimestamp && !report.runtimeAlert) {
-          // Check if it has run too long
           const runtime = Date.now() - new Date(report.createdTimestamp).getTime()
           if (runtime > ALERT_RUNTIME_MS) {
             logger.warn(
               'ReportId: {reportId} - CreatedTimestamp: {reportCreatedTimestamp} - Runtime: {runtime} - Stakkar caller som sitter og venter: {reportCallerUpn} - Brukeren som er treig: {reportUserUserPrincipalName}',
-              report._id,
+              report._id.toString(),
               report.createdTimestamp,
               runtime,
               report.caller.upn,
@@ -88,33 +96,29 @@ app.http('Report', {
 
             const runtimeAlert = { status: true, triggeredAtMs: runtime }
             await collection.updateOne({ _id: new ObjectId(reportId) }, { $set: { runtimeAlert } })
-            // Simply set fakeFinishedTimestamp (which is fake), no need for the user to ask again for this report
             report.runtimeAlert = runtimeAlert
           }
         }
 
         const status = report.finishedTimestamp ? 200 : 202
-        maskSsnValues(report) // Skrell away stuff we dont want
+        maskSsnValues(report)
 
         return httpResponse(status, report)
       } catch (error) {
-        logger.errorException(error, 'Error when trying to get report')
+        logger.errorException(error as Error, 'Error when trying to get report')
         return httpResponse(500, error)
       }
     }
 
-    // POST report
     logger.info('Token is valid, method is POST, checking body')
     const userId = await request.text()
 
-    // Get db client
     const mongoClient = await getMongoClient()
 
-    // Validate user body and get user
-    let user
+    let user: Record<string, unknown> | null
     try {
       const userObjectId = new ObjectId(userId)
-      const userCollection = mongoClient.db(MONGODB.DB_NAME).collection(MONGODB.USERS_COLLECTION)
+      const userCollection = mongoClient.db(dbName).collection(usersCollectionName)
       user = await userCollection.findOne({ _id: userObjectId })
       if (!user) {
         logger.warn('User with ObjectId({userId}) not found in users collection', userId)
@@ -122,20 +126,19 @@ app.http('Report', {
       }
 
       logger.info('User with ObjectId({userId}) found in users collection', userId)
-      // Så kan vi sjekke her om user er flagga i mongodb, og slenge på en ekstra property på user
-      const extraCautionCollection = mongoClient.db(MONGODB.DB_NAME).collection(MONGODB.EXTRA_CAUTION_COLLECTION)
+      const extraCautionCollection = mongoClient.db(dbName).collection(extraCautionCollectionName)
       const extraCautionEntry = await extraCautionCollection.findOne({ oid: user.id, disabled: { $ne: true } })
       if (extraCautionEntry) {
         user.extraCaution = true
         logger.info('User with ObjectId({userId}) is flagged in extraCaution collection - added user.extraCaution true to user object', userId)
-        await warnOnExtraCautionUser(extraCautionEntry.oid, decoded.upn)
+        await warnOnExtraCautionUser(extraCautionEntry.oid as string, decoded.upn)
       }
     } catch (error) {
-      logger.errorException(error, 'Error when trying to get user with ObjectId({userId}) in users collection', userId)
+      logger.errorException(error as Error, 'Error when trying to get user with ObjectId({userId}) in users collection', userId)
       return httpResponse(500, error)
     }
 
-    const collection = mongoClient.db(MONGODB.DB_NAME).collection(MONGODB.REPORT_COLLECTION)
+    const collection = mongoClient.db(dbName).collection(reportCollectionName)
     try {
       const report = {
         instanceId: context.invocationId,
@@ -162,7 +165,7 @@ app.http('Report', {
 
       return httpResponse(200, insertReportResult.insertedId)
     } catch (error) {
-      logger.errorException(error, 'Error when trying to create report')
+      logger.errorException(error as Error, 'Error when trying to create report')
       return httpResponse(500, error)
     }
   }

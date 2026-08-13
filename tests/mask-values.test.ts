@@ -1,8 +1,74 @@
-const assert = require('node:assert')
-const { test, describe } = require('node:test')
-const { maskSsnValues } = require('../src/lib/helpers/mask-values')
+import assert from 'node:assert'
+import { describe, test } from 'node:test'
+import { maskSsnValues } from '../src/lib/helpers/mask-values.js'
 
-const exampleReport = {
+type RawFnr = {
+  valid: boolean
+  type: string
+  listeMedFnr: [string, string, string, { endaEt: string; ogEndaEt: string }]
+}
+
+type AdSystem = {
+  id: string
+  name: string
+  description: string | null
+  failed: boolean
+  startedTimestamp: string
+  finishedTimestamp: string
+  runtime: number
+  tests: [
+    {
+      id: string
+      title: string
+      description: string
+      waitForAllData: boolean
+      result: {
+        status: string
+        message: string
+        raw: {
+          employeeNumber: string
+          fnr: RawFnr
+        }
+      }
+    }
+  ]
+  data: {
+    company: string
+    department: string
+    displayName: string
+    employeeNumber: string
+  }
+}
+
+type OtherSystem = {
+  etUtenfor: [string]
+  endaEt: string
+}
+
+type ExampleReport = {
+  _id: string
+  instanceId: string
+  startedTimestamp: string
+  running: boolean
+  queued: boolean
+  ready: boolean
+  finishedTimestamp: string
+  runtime: number | null
+  user: {
+    surName: string
+    displayName: string
+    domain: string
+    employeeNumber: string
+  }
+  caller: {
+    upn: string
+    oid: string
+  }
+  systems: [AdSystem, OtherSystem]
+  runTime: number
+}
+
+const exampleReport: ExampleReport = {
   _id: '65c649dcf8309cbf72118846',
   instanceId: '629fd4b6-eb0b-4988-be96-b7883c3e6662',
   startedTimestamp: '2024-02-12T09:01:55.862Z',
@@ -67,32 +133,36 @@ const exampleReport = {
 
 maskSsnValues(exampleReport)
 
+const [adSystem, otherSystem] = exampleReport.systems
+const [firstTest] = adSystem.tests
+const { listeMedFnr } = firstTest.result.raw.fnr
+
 describe('SSNs are masked when', () => {
   test('It is nested in user object', () => {
     assert.strictEqual(exampleReport.user.employeeNumber, '123456*****')
   })
 
   test('It is nested in test-result raw object', () => {
-    assert.strictEqual(exampleReport.systems[0].tests[0].result.raw.employeeNumber, '123456*****')
+    assert.strictEqual(firstTest.result.raw.employeeNumber, '123456*****')
   })
 
   test('It is nested in test-result raw object within a nested array', () => {
-    assert.strictEqual(exampleReport.systems[0].tests[0].result.raw.fnr.listeMedFnr[0], '123456*****')
-    assert.strictEqual(exampleReport.systems[0].tests[0].result.raw.fnr.listeMedFnr[1], '123456*****')
-    assert.strictEqual(exampleReport.systems[0].tests[0].result.raw.fnr.listeMedFnr[2], '123456*****')
+    assert.strictEqual(listeMedFnr[0], '123456*****')
+    assert.strictEqual(listeMedFnr[1], '123456*****')
+    assert.strictEqual(listeMedFnr[2], '123456*****')
   })
 
   test('It is nested in test-result raw object inside another object within a nested array', () => {
-    assert.strictEqual(exampleReport.systems[0].tests[0].result.raw.fnr.listeMedFnr[3].endaEt, '123456*****')
-    assert.strictEqual(exampleReport.systems[0].tests[0].result.raw.fnr.listeMedFnr[3].ogEndaEt, '123456*****')
+    assert.strictEqual(listeMedFnr[3].endaEt, '123456*****')
+    assert.strictEqual(listeMedFnr[3].ogEndaEt, '123456*****')
   })
 
   test('It is inside data for a system', () => {
-    assert.strictEqual(exampleReport.systems[0].data.employeeNumber, '123456*****')
+    assert.strictEqual(adSystem.data.employeeNumber, '123456*****')
   })
 
   test('It is just somewhere', () => {
-    assert.strictEqual(exampleReport.systems[1].etUtenfor[0], '109876*****')
-    assert.strictEqual(exampleReport.systems[1].endaEt, '109876*****')
+    assert.strictEqual(otherSystem.etUtenfor[0], '109876*****')
+    assert.strictEqual(otherSystem.endaEt, '109876*****')
   })
 })

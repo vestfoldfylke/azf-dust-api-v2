@@ -1,5 +1,6 @@
-// Simple http response handler, handles plain js errors as well
-module.exports = (statusCode, data) => {
+import type { HttpResponseInit } from '@azure/functions'
+
+const httpResponse = (statusCode: number, data: unknown): HttpResponseInit => {
   if (!statusCode) {
     throw new Error('Missing required parameter "statusCode"')
   }
@@ -14,8 +15,8 @@ module.exports = (statusCode, data) => {
     }
   }
 
-  const error = data.stack || data.toString()
-  const message = data.toString()
+  const error = data instanceof Error ? data.stack || data.toString() : String(data)
+  const message = data instanceof Error ? data.toString() : String(data)
   return {
     status: statusCode,
     jsonBody: {
@@ -24,3 +25,5 @@ module.exports = (statusCode, data) => {
     }
   }
 }
+
+export default httpResponse
