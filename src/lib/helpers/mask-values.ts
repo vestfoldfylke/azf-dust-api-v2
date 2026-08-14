@@ -19,9 +19,9 @@ const maskValues = (obj: unknown, condition: Condition, mask: Mask): void => {
   }
 }
 
-const isPotentialSsn: Condition = (value) => Boolean(Number(value)) && String(value).length === 11
+const isPotentialSsn: Condition = (value: unknown): boolean => Boolean(Number(value)) && String(value).length === 11
 
-const maskSsn: Mask = (ssn) => {
+const maskSsn: Mask = (ssn: unknown): string => {
   const birthdate: string = String(ssn).substring(0, 6)
   return `${birthdate}*****`
 }

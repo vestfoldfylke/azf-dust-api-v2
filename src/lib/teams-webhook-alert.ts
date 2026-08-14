@@ -50,7 +50,7 @@ const formatAdaptiveCard = (
               size: 'Large',
               wrap: true
             },
-            ...resolvedMessages.map((msg) => ({
+            ...resolvedMessages.map((msg: string) => ({
               type: 'TextBlock',
               text: `• ${msg}`,
               wrap: true

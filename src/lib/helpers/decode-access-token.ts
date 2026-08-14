@@ -23,7 +23,7 @@ export function decodeAccessToken(auth: string | null | undefined): Decoded {
     return result
   }
 
-  let payload: string | JwtPayload | null
+  let payload: JwtPayload | string | null
   try {
     payload = decode(auth.replace('Bearer ', ''))
   } catch {
