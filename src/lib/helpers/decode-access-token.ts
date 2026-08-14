@@ -1,52 +1,52 @@
-import { decode, type JwtPayload } from 'jsonwebtoken'
-import type { Decoded } from '../../types/decoded.js'
+import { decode, type JwtPayload } from "jsonwebtoken";
+import type { Decoded } from "../../types/decoded.js";
 
 type DecodedPayload = JwtPayload & {
-  upn?: string
-  appid?: string
-  roles?: string[]
-  oid?: string
-}
+  upn?: string;
+  appid?: string;
+  roles?: string[];
+  oid?: string;
+};
 
 export function decodeAccessToken(auth: string | null | undefined): Decoded {
   const result: Decoded = {
-    upn: '',
-    appid: '',
-    oid: '',
+    upn: "",
+    appid: "",
+    oid: "",
     verified: false,
-    msg: '',
+    msg: "",
     roles: []
-  }
+  };
 
   if (!auth) {
-    result.msg = 'Missing authorization header'
-    return result
+    result.msg = "Missing authorization header";
+    return result;
   }
 
-  let payload: JwtPayload | string | null
+  let payload: JwtPayload | string | null;
   try {
-    payload = decode(auth.replace('Bearer ', ''))
+    payload = decode(auth.replace("Bearer ", ""));
   } catch {
-    result.msg = 'Not a valid jwt'
-    return result
+    result.msg = "Not a valid jwt";
+    return result;
   }
 
-  if (!payload || typeof payload === 'string') {
-    result.msg = 'Not a valid jwt'
-    return result
+  if (!payload || typeof payload === "string") {
+    result.msg = "Not a valid jwt";
+    return result;
   }
 
-  const { upn, appid, roles, oid }: DecodedPayload = payload as DecodedPayload
+  const { upn, appid, roles, oid }: DecodedPayload = payload as DecodedPayload;
   if (!upn && !appid) {
-    result.msg = 'Missing upn or appId'
-    return result
+    result.msg = "Missing upn or appId";
+    return result;
   }
 
-  result.appid = appid ?? ''
-  result.upn = upn || 'appReg'
-  result.oid = oid ?? ''
-  result.verified = true
-  result.roles = roles ?? []
+  result.appid = appid ?? "";
+  result.upn = upn || "appReg";
+  result.oid = oid ?? "";
+  result.verified = true;
+  result.roles = roles ?? [];
 
-  return result
+  return result;
 }

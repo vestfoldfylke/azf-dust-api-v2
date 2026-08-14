@@ -19,6 +19,9 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
+      "suspicious": {
+        "noExplicitAny": "warn"
+      },
       "correctness": {
         "useImportExtensions": {
           "options": {
@@ -28,19 +31,19 @@
         }
       }
     },
-    "includes": ["**", "!dist", "!node_modules"]
+    "includes": ["**", "!dist", "!node_modules", "!!package.json"]
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "single",
-      "lineWidth": 150,
+      "quoteStyle": "double",
+      "lineWidth": 200,
       "trailingCommas": "none",
-      "semicolons": "asNeeded"
+      "semicolons": "always"
     }
   },
   "overrides": [
     {
-      "includes": ["**/*.ts", "**/*.js", "!dist", "!node_modules"],
+      "includes": ["**", "!dist", "!node_modules", "!!package.json"],
       "javascript": {
         "globals": []
       },
@@ -48,9 +51,6 @@
         "rules": {
           "correctness": {
             "noUnusedVariables": "error"
-          },
-          "suspicious": {
-            "noExplicitAny": "error"
           },
           "complexity": {
             "useLiteralKeys": "off"

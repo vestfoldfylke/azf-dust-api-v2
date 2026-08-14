@@ -82,4 +82,4 @@ app.http('Stats', {
   }
 })
 */
-export {}
+export {};
