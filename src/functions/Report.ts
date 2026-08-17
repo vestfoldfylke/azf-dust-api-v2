@@ -164,7 +164,8 @@ app.http("Report", {
         return httpResponse(500, "Failed when inserting new report to db");
       }
 
-      return httpResponse(200, insertReportResult.insertedId);
+      logger.info("New report with Id {Id} created successfully", insertReportResult.insertedId.toString());
+      return httpResponse(200, insertReportResult.insertedId.toString());
     } catch (error) {
       logger.errorException(error as Error, "Error when trying to create new report");
       return httpResponse(500, error);
