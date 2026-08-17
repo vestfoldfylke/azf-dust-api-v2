@@ -9,9 +9,16 @@ const httpResponse = (statusCode: number, data: unknown): HttpResponseInit => {
   }
 
   if (statusCode >= 200 && statusCode < 300) {
+    if (typeof data !== "string") {
+      return {
+        status: statusCode,
+        jsonBody: data
+      };
+    }
+
     return {
       status: statusCode,
-      jsonBody: data
+      body: data as string
     };
   }
 
