@@ -56,6 +56,7 @@ app.http("UserSearch", {
     const users: TestUser[] = await collection.find(findQuery).limit(10).sort({ displayName: 1, samAccountName: 1, feidenavn: 1 }).toArray();
     maskSsnValues(users);
 
+    logger.info("Found {UserCount} users for Query '{Query}'", users.length, qs);
     return httpResponse(200, users);
   }
 });
