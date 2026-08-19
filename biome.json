@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.7/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -13,26 +13,37 @@
     "indentStyle": "space",
     "indentWidth": 2,
     "expand": "auto",
-    "includes": ["**", "!node_modules", "!!package.json"]
+    "includes": ["**", "!dist", "!node_modules", "!!package.json"]
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "preset": "recommended",
+      "suspicious": {
+        "noExplicitAny": "warn"
+      },
+      "correctness": {
+        "useImportExtensions": {
+          "options": {
+            "forceJsExtensions": true
+          },
+          "level": "error"
+        }
+      }
     },
-    "includes": ["**", "!node_modules"]
+    "includes": ["**", "!dist", "!node_modules", "!!package.json"]
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "single",
-      "lineWidth": 150,
+      "quoteStyle": "double",
+      "lineWidth": 200,
       "trailingCommas": "none",
-      "semicolons": "asNeeded"
+      "semicolons": "always"
     }
   },
   "overrides": [
     {
-      "includes": ["**/*.js"],
+      "includes": ["**", "!dist", "!node_modules", "!!package.json"],
       "javascript": {
         "globals": []
       },
@@ -40,9 +51,6 @@
         "rules": {
           "correctness": {
             "noUnusedVariables": "error"
-          },
-          "suspicious": {
-            "noExplicitAny": "error"
           },
           "complexity": {
             "useLiteralKeys": "off"
