@@ -1,10 +1,9 @@
-*.js.map
-*.ts
+**/*.ts
+local.settings.json
+biome.json
+tsconfig.json
 .git*
 .vscode
-local.settings.json
-test
-getting_started.md
-node_modules/@types/
-node_modules/azure-functions-core-tools/
-node_modules/typescript/
+.idea
+/tests
+package-lock.json
